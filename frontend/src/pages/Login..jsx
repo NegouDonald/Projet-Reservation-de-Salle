@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // Import pour navigation
 import { loginUser } from "../service/api";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+ 
 
 export default function Login() {
   const navigate = useNavigate(); // Hook navigation
@@ -102,7 +104,22 @@ export default function Login() {
               </p>
             )}
           </div>
+          <div  className="mt-5" >
+  
+  {/* Barre de navigation simple entre connexion et inscription */}
+  <nav className="flex justify-center mt-4 space-x-4">
+   <span> je n'ai pas de compte </span>
+   <Link
+     to="/register"
+     className="px-4 py-2 rounded bg-blue-400 hover:bg-gray-300"
+   >
+     m'inscription
+   </Link>
+
+ </nav>
+</div>
         </div>
+        
       </div>
     </div>
   );

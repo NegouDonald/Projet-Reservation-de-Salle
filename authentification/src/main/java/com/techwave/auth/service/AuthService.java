@@ -3,55 +3,67 @@ package com.techwave.auth.service;
 import com.techwave.auth.dto.AuthResponse;
 import com.techwave.auth.dto.LoginRequest;
 import com.techwave.auth.dto.RegisterRequest;
+import com.techwave.auth.entity.Role;
 import com.techwave.auth.entity.User;
+import com.techwave.auth.repository.RoleRepository;
 import com.techwave.auth.repository.UserRepository;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-@Service // Marque cette classe comme un service Spring
-@RequiredArgsConstructor // Génère un constructeur avec les dépendances nécessaires (final)
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Data
+@Service
+@RequiredArgsConstructor
 public class AuthService {
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    private final UserRepository userRepository; // Pour accéder à la base de données
-    private final PasswordEncoder passwordEncoder; // Pour chiffrer les mots de passe
-    private final JwtService jwtService; // Pour générer des tokens JWT
-
-    // 🔐 Méthode d'inscription
     public AuthResponse register(RegisterRequest request) {
-        // On crée un nouvel utilisateur avec l’email et le mot de passe chiffré
+        Role defaultRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new RuntimeException("Le rôle USER n'existe pas."));
+
         User user = User.builder()
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword())) // hash du mot de passe
-                .role("USER") // rôle par défaut
+                .password(passwordEncoder.encode(request.getPassword()))
+                .roles(Collections.singleton(defaultRole))
                 .build();
 
-        userRepository.save(user); // on enregistre l'utilisateur dans la base
+        userRepository.save(user);
 
-        // On génère un token JWT pour cet utilisateur
-        String email = user.getEmail();
-        String token = jwtService.generateToken(email);
+        // Ici, on passe bien le email (String), pas l'objet User
+        String token = jwtService.generateToken(user);
 
+        Set<String> roleNames = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
 
-        // On retourne ce token au frontend
-        return new AuthResponse(token);
+        return new AuthResponse(token, user.getEmail(), roleNames);
     }
 
-    // 🔓 Méthode de connexion
+
     public AuthResponse login(LoginRequest request) {
-        // On cherche l’utilisateur en base par son email
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
-        // On vérifie si le mot de passe entré est correct
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Mot de passe invalide");
         }
 
-        // Si tout est bon, on génère un token JWT
-        String email = user.getEmail();
-        String token = jwtService.generateToken(email);
+        // Passe ici bien un String (email) au generateToken
+        String token = jwtService.generateToken(user);
 
-        return new AuthResponse(token);
+        Set<String> roleNames = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+
+        return new AuthResponse(token, user.getEmail(), roleNames);
     }
 }
+

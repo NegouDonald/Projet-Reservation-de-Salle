@@ -12,7 +12,7 @@ export default defineConfig({
     strictPort: true, // empêche Vite de changer de port
     cors: true, // autorise les requêtes cross-origin
     allowedHosts: [
-      'aa23-129-0-189-42.ngrok-free.app'
+      '1816-129-0-189-42.ngrok-free.app'
       
 
     ]}

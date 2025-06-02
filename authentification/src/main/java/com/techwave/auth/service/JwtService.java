@@ -8,9 +8,13 @@ import org.springframework.stereotype.Service;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import com.techwave.auth.entity.Role;
+import com.techwave.auth.entity.User;
 @Service
 public class JwtService {
 
@@ -22,15 +26,23 @@ public class JwtService {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     }
 
-    // 📤 Génère un token JWT à partir du username
-    public String generateToken(String username) {
+    // 📤 Génère un token JWT à partir du user
+    public String generateToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("roles", user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList()));
+
         return Jwts.builder()
-                .setSubject(username) // le contenu principal : le username
-                .setIssuedAt(new Date(System.currentTimeMillis())) // date de création
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // expire dans 10h
-                .signWith(getSignInKey(), SignatureAlgorithm.HS256) // signe avec clé secrète
-                .compact(); // retourne le token
+                .setClaims(claims)
+                .setSubject(user.getEmail())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 heures
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
+
+
 
     // 📥 Extraire le username depuis un token
     public String extractUsername(String token) {
@@ -56,6 +68,10 @@ public class JwtService {
     public boolean isTokenValid(String token, String username) {
         final String extractedUsername = extractUsername(token);
         return extractedUsername.equals(username) && !isTokenExpired(token);
+    }
+    public List<String> extractRoles(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims.get("roles", List.class);
     }
 
     // ⏳ Vérifie expiration

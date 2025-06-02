@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { registerUser } from "../service/api"; // Ta fonction d'inscription backend
-
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+ 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,7 +100,19 @@ export default function Register() {
               </p>
             )}
           </div>
+                    {/* Barre de navigation simple entre connexion et inscription */}
+  <nav className="flex justify-center mt-4 space-x-4">
+   <span> j'ai pas de compte </span>
+         <Link
+           to="/Login"
+           className="px-4 py-2 rounded bg-blue-400 text-white hover:bg-gray-300"
+         >
+           Connexion
+         </Link>
+
+ </nav>
         </div>
+
       </div>
     </div>
   );

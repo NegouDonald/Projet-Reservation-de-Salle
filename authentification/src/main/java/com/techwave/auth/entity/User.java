@@ -8,13 +8,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-@Entity // Cette classe sera mappée à une table en base
-@Data // Lombok génère getters, setters, toString, equals, hashCode
+@Entity
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User implements UserDetails {  // Implémentation de UserDetails
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,50 +27,29 @@ public class User implements UserDetails {  // Implémentation de UserDetails
 
     private String password;
 
-    private String role; // Exemple : "USER", "ADMIN"
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_roles", // table de liaison
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles;
 
-    // --------- Méthodes obligatoires de l’interface UserDetails ------------
-
-    // Cette méthode retourne la liste des rôles/authorities sous forme d’objets Spring Security
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Ici, on crée une liste contenant un seul rôle à partir du champ `role`
-        return List.of(new SimpleGrantedAuthority(role));
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .collect(Collectors.toList());
     }
 
-    // La méthode getPassword() doit retourner le mot de passe encodé
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
-    // Cette méthode retourne le nom d’utilisateur (ici on utilise email)
     @Override
     public String getUsername() {
         return email;
     }
 
-    // Pour simplifier, on indique que le compte n’est pas expiré
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    // Le compte n’est pas verrouillé
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    // Les credentials (mot de passe) ne sont pas expirés
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    // Le compte est activé/enabled
-    @Override
-    public boolean isEnabled() {
-        return true;
-    }
+    @Override public String getPassword() { return password; }
+    @Override public boolean isAccountNonExpired() { return true; }
+    @Override public boolean isAccountNonLocked() { return true; }
+    @Override public boolean isCredentialsNonExpired() { return true; }
+    @Override public boolean isEnabled() { return true; }
 }

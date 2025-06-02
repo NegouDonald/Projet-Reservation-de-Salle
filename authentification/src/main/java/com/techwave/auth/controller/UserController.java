@@ -1,24 +1,46 @@
 package com.techwave.auth.controller;
 
+import com.techwave.auth.dto.AuthResponse;
+import com.techwave.auth.entity.Role;
+import com.techwave.auth.entity.User;
+import com.techwave.auth.repository.UserRepository;
+import com.techwave.auth.service.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/user")
+@RequiredArgsConstructor
 public class UserController {
 
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+
     @GetMapping("/me")
-    public ResponseEntity<Map<String, String>> getCurrentUserEmail(Authentication authentication) {
-        // Récupère le nom de l’utilisateur (généralement son email)
-        String email = authentication.getName();
+    public ResponseEntity<AuthResponse> getUserInfo(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-        // Tu peux aussi récupérer plus de détails si tu stockes un objet UserDetails personnalisé
+        String token = authHeader.substring(7);
+        String email = jwtService.extractUsername(token);
 
-        return ResponseEntity.ok(Map.of("email", email));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
+
+        Set<String> roleNames = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+
+        AuthResponse response = new AuthResponse(token, email, roleNames);
+        return ResponseEntity.ok(response);
     }
 }
