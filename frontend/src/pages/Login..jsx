@@ -1,126 +1,88 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import pour navigation
-import { loginUser } from "../service/api";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
- 
+import { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-export default function Login() {
-  const navigate = useNavigate(); // Hook navigation
+const Login = () => {
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    setIsLoading(true);
-    setMessage("");
-
+    console.log('Données envoyées:', formData);
     try {
-      const token = await loginUser({ email, password });
-      localStorage.setItem("token", token);
-
-      setMessage("Connexion réussie ! Redirection...");
-
-      // Redirection après 1.5s vers le dashboard
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1500);
-    } catch (error) {
-      setMessage(`Erreur de connexion : ${error.message}`);
-    } finally {
-      setIsLoading(false);
+      const response = await axios.post('http://localhost:8080/api/auth/login', formData);
+      console.log('Token reçu:', response.data.token);
+      localStorage.setItem('token', response.data.token);
+      navigate('/reservations');
+    } catch (err) {
+      setError(err.response?.data || 'Erreur de connexion');
+      console.error('Erreur API:', err.response?.data);
+      setTimeout(() => setError(''), 3000);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-300 to-blue-600 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div className="max-w-md mx-auto">
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-700">Connexion</h2>
-            </div>
-
-            <div className="divide-y divide-gray-200">
-              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label htmlFor="email" className="sr-only">Email</label>
-                    <div className="relative">
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        className="peer w-full rounded-md border border-gray-300 px-4 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="password" className="sr-only">Mot de passe</label>
-                    <div className="relative">
-                      <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        className="peer w-full rounded-md border border-gray-300 px-4 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="Mot de passe"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <button
-                      type="submit"
-                      className="w-full rounded-md bg-blue-500 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Connexion..." : "Se connecter"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            {message && (
-              <p
-                className={`mt-4 text-center text-sm ${
-                  message.startsWith("Erreur") ? "text-red-500" : "text-green-500"
-                }`}
-              >
-                {message}
-              </p>
-            )}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-100 to-indigo-200">
+      <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl transform transition-all duration-300 hover:scale-105">
+        <h1 className="text-3xl font-bold text-center text-indigo-600 mb-6">Connexion</h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              Nom d'utilisateur
+            </label>
+            <input
+              id="username"
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-200"
+              placeholder="Entrez votre nom d'utilisateur"
+              required
+            />
           </div>
-          <div  className="mt-5" >
-  
-  {/* Barre de navigation simple entre connexion et inscription */}
-  <nav className="flex justify-center mt-4 space-x-4">
-   <span> je n'ai pas de compte </span>
-   <Link
-     to="/register"
-     className="px-4 py-2 rounded bg-blue-400 hover:bg-gray-300"
-   >
-     m'inscription
-   </Link>
-
- </nav>
-</div>
-        </div>
-        
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Mot de passe
+            </label>
+            <input
+              id="password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-200"
+              placeholder="Entrez votre mot de passe"
+              required
+            />
+          </div>
+          {error && (
+            <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm animate-fade-in">
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105"
+          >
+            Se connecter
+          </button>
+        </form>
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Pas de compte ?{' '}
+          <a href="/register" className="text-indigo-600 hover:text-indigo-800 font-medium">
+            S'inscrire
+          </a>
+        </p>
       </div>
     </div>
   );
-}
+};
+
+export default Login;

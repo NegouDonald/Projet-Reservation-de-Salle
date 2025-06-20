@@ -1,33 +1,24 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+ 
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+ 
+import Login from './pages/Login.';
+import Reservations from './components/Reservations';
+import Materiels from './components/Materiels';
+import Register from './pages/Register';
+import Salles from './components/Salles';
 
-// Pages
-import Register from "./pages/Register";
-import Login from "./pages/Login.";
-import Dashboard from "./pages/Dashboard";
-import HOME from "./pages/Home";
-// Route privée
-import PrivateRoute from "./components/PrivateRoute";
-
-export default function App() {
+function App() {
   return (
     <Router>
-
-
-      {/* Routes */}
       <Routes>
-      <Route path="/" element={<HOME />} />
-        <Route path="/Login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
+      <Route path="/Salles" element={<Salles />} />
+        <Route path="/" element={<Register />} />
+        <Route path="/reservations" element={<Reservations />} />
+        <Route path="/materiels" element={<Materiels />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </Router>
   );
 }
+
+export default App;

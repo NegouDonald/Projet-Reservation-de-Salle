@@ -1,75 +1,64 @@
 package com.techwave.auth.security;
 
 
-
-import com.techwave.auth.service.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.techwave.auth.service.CustomUserDetailsService;
-
+import javax.crypto.SecretKey;
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtService jwtService;
+    private final UserDetailsService userDetailsService;
+    private final SecretKey secretKey;
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    public JwtAuthenticationFilter(UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+        this.secretKey = Keys.hmacShaKeyFor("your-very-secure-secret-key-1234567890".getBytes());
+    }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String authorizationHeader = request.getHeader("Authorization");
+        String username = null;
+        String jwt = null;
 
-        // 🧠 Récupère l’en-tête Authorization : "Bearer <token>"
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
-
-        // 🚫 Si pas d’en-tête ou mauvais format → on laisse passer la requête
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // 🔑 Extrait le token
-        jwt = authHeader.substring(7);
-        username = jwtService.extractUsername(jwt);
-
-        // 🧪 Si utilisateur non encore authentifié
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // 🔍 Charge les infos utilisateur
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-
-            // ✅ Vérifie que le token est bien valide
-            if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
-                // 🔐 Crée un objet d’authentification
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
-
-                // 🧠 Enregistre l’utilisateur authentifié dans le contexte de sécurité
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            jwt = authorizationHeader.substring(7);
+            try {
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(secretKey)
+                        .build()
+                        .parseClaimsJws(jwt)
+                        .getBody();
+                username = claims.getSubject();
+            } catch (Exception e) {
+                // Token invalide
             }
         }
 
-        // ➡️ Poursuit la chaîne de filtres
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+
         filterChain.doFilter(request, response);
     }
 }
